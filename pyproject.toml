@@ -1,0 +1,32 @@
+# pyproject.toml
+
+[build-system]
+requires      = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyosmo360"
+version = "0.0.1"
+description = "Python Package to Control a DJI OSMO360 Kamera over Bluetooth"
+readme = "README.md"
+authors = [{ name = "benjamin.loesch", email = "benjamin.loesch@gmx.ch" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["OSMO360", "CAMERA", "DJI"]
+dependencies = [
+    "bleak >= 1.1.1"
+]
+requires-python = ">=3.9"
+
+[project.optional-dependencies]
+dev = ["pip-tools"]
+
+[project.urls]
+Homepage = "https://github.com/"
+
+[project.scripts]
+osmo360 = "osmo360.__main__:main"
