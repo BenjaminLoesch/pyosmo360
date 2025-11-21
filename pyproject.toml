@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyosmo360"
-version = "0.0.1"
+version = "0.1.0"
 description = "Python Package to Control a DJI OSMO360 Kamera over Bluetooth"
 readme = "README.md"
 authors = [{ name = "benjamin.loesch", email = "benjamin.loesch@gmx.ch" }]
@@ -26,7 +26,7 @@ requires-python = ">=3.9"
 dev = ["pip-tools"]
 
 [project.urls]
-Homepage = "https://github.com/"
+Homepage = "https://github.com/BenjaminLoesch/pyosmo360"
 
 [project.scripts]
 osmo360 = "osmo360.__main__:main"

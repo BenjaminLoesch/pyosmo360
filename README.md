@@ -25,6 +25,17 @@ This project provides a small Python client to connect to a **DJI Osmo Action 36
 pip install bleak
 ```
 
+## Getting Started
+
+```
+  git clone [this repo]
+  cd pyosmo360
+  python -m venv .
+  pip install -r requirements.txt
+  cd src
+  python -m pyosmo360
+```
+
 ## Configuration
 
 The following constants in Osmo360 may need to be adapted to your setup:
