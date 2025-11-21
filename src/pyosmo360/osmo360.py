@@ -271,47 +271,49 @@ class Osmo360:
     camera_state = None
 
     # Bluetooth configuration
-    TARGET_NAME = "Osmo360-64B3"
+    #TARGET_NAME = "Osmo360-64B3"
     SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb"
     WRITE_UUID = "0000fff5-0000-1000-8000-00805f9b34fb"
     NOTIFY_UUID = "0000fff4-0000-1000-8000-00805f9b34fb"
-    LOCAL_MAC = "38-34-56-78-9A-BC"
+    #LOCAL_MAC = "38-34-56-78-9A-BC"
 
     CTR_DEVICE_ID = 0x01020304  # DJI GPS Controller
 
+    camera_name = ''
     cameraStatus: CameraStatus
     verbose: bool = False
     cameraStatusCallbacks = []
 
-    def __init__(self):
-        pass
+    def __init__(self, camera_name, local_mac = "01-02-03-04-05-06"):
+        self.camera_name = camera_name
+        self.local_mac = local_mac
 
     def is_connected(self):
         pass
 
     async def _connect_bt(self):
         """Connect camera via Bluetooth"""
-        print("Starting Bluetooth scan...")
+        if self.verbose: print("Starting Bluetooth scan...")
         devices = await BleakScanner.discover(2)
 
         target_device = None
         for d in devices:
-            if d.name and self.TARGET_NAME in d.name:
-                print(f"Target device found: {d.name} ({d.address})")
+            if d.name and self.camera_name in d.name:
+                if self.verbose: print(f"Target device found: {d.name} ({d.address})")
                 target_device = d
                 break
 
         if not target_device:
             raise Exception("DJI Osmo Action device not found")
 
-        print(f"Connecting to device: {target_device.address}")
+        if self.verbose: print(f"Connecting to device: {target_device.address}")
         self.client = BleakClient(target_device.address)
         await self.client.connect()
-        print("Bluetooth connection established")
+        if self.verbose: print("Bluetooth connection established")
 
         # Enable notifications
         await self.client.start_notify(self.NOTIFY_UUID, self._notification_handler)
-        print("Notifications enabled")
+        if self.verbose: print("Notifications enabled")
 
     async def connect(self):
         """Send connection request and handle handshake"""
@@ -319,7 +321,7 @@ class Osmo360:
         if not self.client or not self.client.is_connected:
             await self._connect_bt()
 
-        print("Sending connection request...")
+        if self.verbose: print("Sending connection request...")
 
         verify_code = random.randint(0, 9999)
         is_first_pairing = False
@@ -328,7 +330,7 @@ class Osmo360:
             "<IB16sIBBH4s",
             self.CTR_DEVICE_ID,
             6,
-            self._parse_mac_address(self.LOCAL_MAC) + b'\x00' * 10,
+            self._parse_mac_address(self.local_mac) + b'\x00' * 10,
             0,
             0,
             1 if is_first_pairing else 0,
@@ -344,30 +346,30 @@ class Osmo360:
 
         try:
             if self.verbose:
-                print(f"Full response frame received: {frame}")
+                if self.verbose: print(f"Full response frame received: {frame}")
 
             if frame['cmd_set'] != 0x00 or frame['cmd_id'] != 0x19:
-                print("Response frame does not belong to connection request")
+                if self.verbose: print("Response frame does not belong to connection request")
                 return False
 
             if frame['frame_type'] != 1:
-                print("Response frame is not of response type")
+                if self.verbose: print("Response frame is not of response type")
                 return False
 
             if len(frame['data']) < 5:
-                print("Response data too short")
+                if self.verbose: print("Response data too short")
                 return False
 
             self.device_id = int.from_bytes(frame['data'][0:4], 'little')
             ret_code = frame['data'][4]
 
-            print(f"Camera response - Device ID: 0x{self.device_id:04X}, return code: {ret_code}")
+            if self.verbose: print(f"Camera response - Device ID: 0x{self.device_id:04X}, return code: {ret_code}")
 
             if ret_code != 0x00:
-                print(f"Connection request rejected, error code: {ret_code}")
+                if self.verbose: print(f"Connection request rejected, error code: {ret_code}")
                 return False
 
-            print("Waiting for connection request from camera...")
+            if self.verbose: print("Waiting for connection request from camera...")
             self.notification_received.clear()
             try:
                 await asyncio.wait_for(self.notification_received.wait(), 10)
@@ -379,19 +381,19 @@ class Osmo360:
                             cam_verify_mode = frame['data'][26]
                             cam_verify_data = int.from_bytes(frame['data'][27:29], 'little')
 
-                            print(
+                            if self.verbose: print(
                                 f"Camera connection request - verification mode: {cam_verify_mode}, "
                                 f"verification result: {cam_verify_data}"
                             )
 
                             if cam_verify_mode == 2:
                                 if cam_verify_data == 0:
-                                    print("Camera allows connection")
+                                    if self.verbose: print("Camera allows connection")
                                     ack_payload = struct.pack("<IB4s", 0x12345678, 0x00, b'\x00\x00\x00\x00')
                                     await self.send_dji_command(0x00, 0x19, ack_payload, is_response=True)
                                     return self.device_id
                                 else:
-                                    print("Camera denies connection")
+                                    if self.verbose: print("Camera denies connection")
                                     if self.client: await self.client.disconnect()
                                     return False
             except asyncio.TimeoutError:
@@ -412,7 +414,7 @@ class Osmo360:
         try:
             frame = self.parse_dji_frame(data)
             if self.verbose:
-                print(f"Full protocol frame received: {frame}")
+                if self.verbose: print(f"Full protocol frame received: {frame}")
 
             if frame['frame_type'] == 1:
                 self.last_response_frame = frame
@@ -443,25 +445,25 @@ class Osmo360:
         pass
 
     async def setMode(self, mode: CameraMode):
-        print('setMode to: ' + mode.name)
+        if self.verbose: print('setMode to: ' + mode.name)
         ack_payload = struct.pack("<IB4s", self.device_id, mode.value, b'\x00\x00\x00\x00')
         resp = await self.send_dji_command(0x1D, 0x04, ack_payload, wait_for_response=True)
         return resp is not None and resp['data'] == 0x00
 
     async def startRecording(self):
-        print('startRecording')
+        if self.verbose: print('startRecording')
         ack_payload = struct.pack("<IB4s", self.device_id, 0x00, b'\x00\x00\x00\x00')
         resp = await self.send_dji_command(0x1D, 0x03, ack_payload, wait_for_response=True)
         return resp is not None and resp['data'] == 0x00
 
     async def stopRecording(self):
-        print('stopRecording')
+        if self.verbose: print('stopRecording')
         ack_payload = struct.pack("<IB4s", self.device_id, 0x01, b'\x00\x00\x00\x00')
         resp = await self.send_dji_command(0x1D, 0x03, ack_payload, wait_for_response=True)
         return resp is not None and resp['data'] == 0x00
 
     async def grabImage(self):
-        print('grab image')
+        if self.verbose: print('grab image')
         ack_payload = struct.pack("<IB4s", self.device_id, 0x00, b'\x00\x00\x00\x00')
         resp = await self.send_dji_command(0x1D, 0x03, ack_payload, wait_for_response=True)
         return resp is not None and resp['data'] == 0x00
@@ -512,14 +514,14 @@ class Osmo360:
 
         self.last_response_frame = None
         frame = self.build_dji_frame(cmd_set, cmd_id, payload, is_response, ack_type=1)
-        print(f"Sending DJI command: {frame.hex()}")
+        if self.verbose: print(f"Sending DJI command: {frame.hex()}")
         await self.client.write_gatt_char(self.WRITE_UUID, frame, response=True)
 
         if self.last_response_frame:
             return self.last_response_frame
 
         if wait_for_response:
-            print("Waiting for response...")
+            if self.verbose: print("Waiting for response...")
             self.response_received.clear()
             try:
                 await asyncio.wait_for(self.response_received.wait(), timeout)

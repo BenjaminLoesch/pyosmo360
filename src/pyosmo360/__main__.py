@@ -4,7 +4,7 @@ from pyosmo360 import osmo360
 
 async def main():
 
-    async with osmo360.Osmo360() as osmo:
+    async with osmo360.Osmo360("Osmo360-64B3") as osmo:
         print('connected')
         await asyncio.sleep(2)
         await osmo.setMode(osmo360.CameraMode.PANO_PHOTO)
