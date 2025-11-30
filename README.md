@@ -86,6 +86,6 @@ async def main():
 
 ## Notes
 
-- The BLE protocol and command set are reverse-engineered/undocumented and may change with firmware updates.
+- The BLE protocol and commands may change with firmware updates.
 - Error handling and reconnection logic are intentionally minimal and may need to be hardened for production use.
 - Make sure Bluetooth is enabled and the camera is in a state where it is discoverable and accepts controller connections.
